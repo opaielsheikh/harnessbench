@@ -1,0 +1,34 @@
+[
+  {
+    "task_id": "context-loss",
+    "outcome": "failed",
+    "eval_signal": "harness",
+    "tags": ["context loss", "memory", "long horizon"],
+    "failure_mode": "Persistent task memory was too weak",
+    "suggested_harness_fix": "Add a live hypothesis ledger"
+  },
+  {
+    "task_id": "resource-limit",
+    "outcome": "error",
+    "eval_signal": "infra",
+    "tags": ["resource", "timeout", "terminal-bench"],
+    "failure_mode": "Resource-sensitive strategy",
+    "suggested_harness_fix": "Add a resource-aware planner"
+  },
+  {
+    "task_id": "verifier-risk",
+    "outcome": "pass?",
+    "eval_signal": "verifier",
+    "tags": ["reward hack", "verifier", "safety"],
+    "failure_mode": "Verifier can be gamed",
+    "suggested_harness_fix": "Add adversarial verifier review"
+  },
+  {
+    "task_id": "bad-delegation",
+    "outcome": "partial",
+    "eval_signal": "orchestration",
+    "tags": ["subagents", "planning", "merge"],
+    "failure_mode": "Delegation contract was underspecified",
+    "suggested_harness_fix": "Add subagent contracts"
+  }
+]

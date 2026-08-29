@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HarnessBench | Opai Elsheikh</title>
+  <meta name="description" content="HarnessBench is a small RLM harness evaluation lab for visualizing agent failures, benchmark signals, and possible harness improvements.">
+
+  <meta property="og:title" content="HarnessBench: RLM Harness Evaluation Lab">
+  <meta property="og:description" content="A small interactive lab connecting Prime Agent-style RLM harnesses with Terminal-Bench-style evaluation signals.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://opaielsheikh.github.io/projects/harnessbench/">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&amp;family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&amp;display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-color: #fbf9f5;
+      --panel: #f4eee7;
+      --panel-strong: #171614;
+      --text-main: #1b1b1b;
+      --text-muted: #646059;
+      --border-color: #eae6df;
+      --accent-color: #c25936;
+      --accent-soft: #ecd9ce;
+      --green: #2e6b4d;
+      --amber: #94702c;
+      --red: #9f3d37;
+      --blue: #3d5f88;
+      --font-serif: 'Newsreader', Georgia, serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg-color);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      min-height: 100vh;
+      padding: 2rem;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a {
+      color: var(--accent-color);
+      text-decoration: underline;
+      text-underline-offset: 4px;
+      text-decoration-color: #e2a691;
+    }
+
+    a:hover {
+      color: var(--text-main);
+      text-decoration-color: var(--text-main);
+    }
+
+    .shell {
+      width: min(1380px, 100%);
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 2.4rem;
+    }
+
+    .back-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+    }
+
+    .back-link:hover {
+      color: var(--text-main);
+    }
+
+    .source-links {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      font-size: 0.78rem;
+    }
+
+    .header {
+      display: grid;
+      grid-template-columns: minmax(0, 0.95fr) minmax(320px, 0.55fr);
+      gap: 2.5rem;
+      align-items: end;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .kicker {
+      color: var(--accent-color);
+      font-size: 0.78rem;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      margin-bottom: 0.9rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(2.9rem, 8vw, 6.2rem);
+      font-weight: 500;
+      letter-spacing: 0;
+      line-height: 0.95;
+      margin-bottom: 1rem;
+    }
+
+    .subtitle {
+      font-family: var(--font-serif);
+      font-size: 1.42rem;
+      font-style: italic;
+      line-height: 1.38;
+      color: var(--text-muted);
+      max-width: 780px;
+    }
+
+    .summary-panel {
+      border: 1px solid var(--border-color);
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 1.2rem;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text-muted);
+    }
+
+    .summary-panel strong {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 310px minmax(0, 1fr);
+      gap: 1.4rem;
+      align-items: start;
+    }
+
+    .sidebar,
+    .panel {
+      border-top: 1px solid var(--border-color);
+      min-width: 0;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 1.5rem;
+      padding-top: 1rem;
+    }
+
+    .sidebar-title,
+    .panel-title {
+      color: var(--text-main);
+      font-size: 0.76rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .case-list {
+      display: grid;
+      gap: 0.7rem;
+    }
+
+    .case-button {
+      width: 100%;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-main);
+      cursor: pointer;
+      padding: 0.85rem;
+      text-align: left;
+      font-family: var(--font-mono);
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .case-button:hover,
+    .case-button.active {
+      background: var(--panel);
+      border-color: #d7cfc3;
+    }
+
+    .case-button strong {
+      display: block;
+      font-size: 0.86rem;
+      font-weight: 600;
+      line-height: 1.35;
+      margin-bottom: 0.45rem;
+    }
+
+    .case-button span {
+      color: var(--text-muted);
+      display: block;
+      font-size: 0.72rem;
+      line-height: 1.45;
+    }
+
+    .main {
+      display: grid;
+      gap: 1.3rem;
+      min-width: 0;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.8rem;
+      min-width: 0;
+    }
+
+    .metric {
+      border: 1px solid var(--border-color);
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 0.9rem;
+      min-height: 95px;
+      min-width: 0;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .metric strong {
+      display: block;
+      font-family: var(--font-serif);
+      font-size: 1.75rem;
+      font-weight: 500;
+      line-height: 1;
+      overflow-wrap: anywhere;
+    }
+
+    .panel {
+      padding-top: 1rem;
+    }
+
+    .case-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 1rem;
+      align-items: start;
+      margin-bottom: 1.2rem;
+    }
+
+    .case-head h2 {
+      font-family: var(--font-serif);
+      font-size: 2.2rem;
+      font-weight: 500;
+      line-height: 1.1;
+      margin-bottom: 0.65rem;
+    }
+
+    .case-head p {
+      color: var(--text-muted);
+      font-size: 0.86rem;
+      line-height: 1.65;
+      max-width: 760px;
+    }
+
+    .badge-stack {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.45rem;
+    }
+
+    .badge {
+      border: 1px solid var(--border-color);
+      border-radius: 999px;
+      color: var(--text-muted);
+      font-size: 0.68rem;
+      padding: 0.32rem 0.55rem;
+      white-space: nowrap;
+    }
+
+    .badge.fail {
+      color: var(--red);
+      border-color: #dcb4ad;
+      background: #f3dfdc;
+    }
+
+    .badge.warn {
+      color: var(--amber);
+      border-color: #dfcf9f;
+      background: #f3ead0;
+    }
+
+    .badge.good {
+      color: var(--green);
+      border-color: #b8d1bf;
+      background: #dfebdf;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+      gap: 1rem;
+      min-width: 0;
+    }
+
+    .timeline,
+    .analysis {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: rgba(244, 238, 231, 0.58);
+      padding: 1rem;
+      min-height: 420px;
+      min-width: 0;
+    }
+
+    .timeline-list {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 32px minmax(0, 1fr);
+      gap: 0.75rem;
+      align-items: start;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.75rem;
+    }
+
+    .timeline-item:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .node {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: var(--panel-strong);
+      color: #f3eee7;
+      font-size: 0.72rem;
+    }
+
+    .timeline-item h3 {
+      font-size: 0.86rem;
+      line-height: 1.35;
+      margin-bottom: 0.25rem;
+    }
+
+    .timeline-item p {
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      line-height: 1.55;
+    }
+
+    .analysis-grid {
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    .analysis-row {
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.8rem;
+    }
+
+    .analysis-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .analysis-row span {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.35rem;
+      text-transform: uppercase;
+    }
+
+    .analysis-row strong {
+      display: block;
+      font-family: var(--font-serif);
+      font-size: 1.28rem;
+      font-weight: 500;
+      line-height: 1.25;
+    }
+
+    .analysis-row p {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      line-height: 1.6;
+      margin-top: 0.35rem;
+    }
+
+    .diagram {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--panel-strong);
+      color: #f3eee7;
+      overflow: hidden;
+    }
+
+    .diagram-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      border-bottom: 1px solid #2a2824;
+      padding: 0.85rem 1rem;
+      color: #c8c0b6;
+      font-size: 0.72rem;
+    }
+
+    .diagram-body {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 0.7rem;
+      padding: 1rem;
+    }
+
+    .diagram-node {
+      border: 1px solid #38342f;
+      border-radius: 8px;
+      min-height: 105px;
+      padding: 0.8rem;
+      background: #201e1b;
+    }
+
+    .diagram-node strong {
+      display: block;
+      color: #fff8ee;
+      font-size: 0.78rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .diagram-node span {
+      color: #b8b0a6;
+      display: block;
+      font-size: 0.68rem;
+      line-height: 1.45;
+    }
+
+    .code-block {
+      background: var(--panel-strong);
+      color: #f3eee7;
+      border-radius: 8px;
+      border: 1px solid #2a2824;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      line-height: 1.65;
+      overflow-x: auto;
+      padding: 1rem;
+      white-space: pre;
+    }
+
+    .code-block code {
+      color: inherit;
+      font: inherit;
+    }
+
+    @media (max-width: 1050px) {
+      .header,
+      .app,
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+      }
+
+      .metric-grid,
+      .diagram-body {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .badge-stack {
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 1.2rem;
+      }
+
+      .topbar,
+      .case-head {
+        grid-template-columns: 1fr;
+        display: grid;
+      }
+
+      .source-links {
+        gap: 0.7rem;
+      }
+
+      .metric-grid,
+      .diagram-body {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="topbar">
+      <a class="back-link" href="/">&larr; Opai Elsheikh</a>
+      <div class="source-links">
+        <a href="https://opaielsheikh.github.io/blogs/prime-agent-rlm/">Prime Agent blog</a>
+        <a href="https://opaielsheikh.github.io/blogs/terminal-bench-4-0/">Terminal-Bench blog</a>
+        <a href="https://github.com/opaielsheikh/harnessbench" target="_blank" rel="noopener">GitHub repo</a>
+      </div>
+    </div>
+
+    <header class="header">
+      <div>
+        <p class="kicker">RLM Harness Evaluation Lab</p>
+        <h1>HarnessBench</h1>
+        <p class="subtitle">A tiny interactive lab for connecting Prime-Agent-style recursive harnesses with Terminal-Bench-style evaluation signals.</p>
+      </div>
+      <aside class="summary-panel">
+        <strong>Core idea:</strong> an agent failure is not always a model failure. Sometimes the harness forgot state, split work badly, used the wrong tool, hit a resource limit, or got misled by a verifier. HarnessBench turns those failures into concrete harness improvements.
+      </aside>
+    </header>
+
+    <section class="app" aria-label="HarnessBench interactive explorer">
+      <aside class="sidebar">
+        <p class="sidebar-title">Failure Cases</p>
+        <div class="case-list" id="caseList"></div>
+      </aside>
+
+      <div class="main">
+        <section class="metric-grid" aria-label="Run metrics">
+          <div class="metric">
+            <span>Outcome</span>
+            <strong id="metricOutcome">-</strong>
+          </div>
+          <div class="metric">
+            <span>Cost Signal</span>
+            <strong id="metricCost">-</strong>
+          </div>
+          <div class="metric">
+            <span>Harness Risk</span>
+            <strong id="metricRisk">-</strong>
+          </div>
+          <div class="metric">
+            <span>Eval Signal</span>
+            <strong id="metricSignal">-</strong>
+          </div>
+        </section>
+
+        <section class="panel">
+          <p class="panel-title">Selected Run</p>
+          <div class="case-head">
+            <div>
+              <h2 id="caseTitle">-</h2>
+              <p id="caseDescription">-</p>
+            </div>
+            <div class="badge-stack" id="badgeStack"></div>
+          </div>
+
+          <div class="workspace">
+            <div class="timeline">
+              <p class="panel-title">RLM Timeline</p>
+              <div class="timeline-list" id="timelineList"></div>
+            </div>
+            <div class="analysis">
+              <p class="panel-title">Failure Diagnosis</p>
+              <div class="analysis-grid">
+                <div class="analysis-row">
+                  <span>Likely failure mode</span>
+                  <strong id="failureMode">-</strong>
+                  <p id="failureReason">-</p>
+                </div>
+                <div class="analysis-row">
+                  <span>Suggested harness improvement</span>
+                  <strong id="harnessFix">-</strong>
+                  <p id="harnessFixReason">-</p>
+                </div>
+                <div class="analysis-row">
+                  <span>Benchmark lesson</span>
+                  <strong id="benchmarkLesson">-</strong>
+                  <p id="benchmarkReason">-</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="diagram" aria-label="RLM harness architecture">
+          <div class="diagram-head">
+            <span>Prime-style harness loop</span>
+            <span>task -> state -> subagents -> tools -> eval -> refinement</span>
+          </div>
+          <div class="diagram-body">
+            <div class="diagram-node">
+              <strong>Main agent</strong>
+              <span>Plans, delegates, merges results, decides whether the run is done.</span>
+            </div>
+            <div class="diagram-node">
+              <strong>Persistent state</strong>
+              <span>Stores files, notes, handles, summaries, and task history outside the prompt.</span>
+            </div>
+            <div class="diagram-node">
+              <strong>Subagents</strong>
+              <span>Split review, testing, docs, debugging, or search into focused child runs.</span>
+            </div>
+            <div class="diagram-node">
+              <strong>Terminal env</strong>
+              <span>Runs shell commands, test suites, dependency installs, scripts, and verifiers.</span>
+            </div>
+            <div class="diagram-node">
+              <strong>Eval loop</strong>
+              <span>Turns failures into typed signals the harness can learn from next time.</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <p class="panel-title">Example Run Record</p>
+          <pre class="code-block"><code id="runRecord">{}</code></pre>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const cases = [
+      {
+        id: "context-loss",
+        title: "Context Lost Across A Long Repair",
+        description: "The agent finds the real bug early, but later forgets why the first patch mattered after running tests and inspecting unrelated files.",
+        outcome: "Failed",
+        cost: "Medium",
+        risk: "High",
+        signal: "Harness",
+        tags: ["context loss", "memory", "long horizon"],
+        timeline: [
+          ["Task", "User asks the agent to fix a failing integration test."],
+          ["Inspect", "Main agent reads the failing trace and identifies a state serialization bug."],
+          ["Drift", "After several tool calls, the agent starts optimizing an unrelated slow test."],
+          ["Patch", "Final patch improves speed but leaves the original failure unchanged."],
+          ["Eval", "Verifier fails. The trajectory shows the first diagnosis was correct."]
+        ],
+        failureMode: "Persistent task memory was too weak",
+        failureReason: "The run contained the right insight, but the harness did not keep that insight active as the task grew.",
+        harnessFix: "Add a live hypothesis ledger",
+        harnessFixReason: "Store current hypotheses, evidence, and rejected paths outside the prompt. Require the main agent to update it before every major patch.",
+        benchmarkLesson: "Measure trajectory quality, not only pass or fail",
+        benchmarkReason: "A binary score misses that the agent had the answer and lost it. That is a harness failure worth tracking."
+      },
+      {
+        id: "resource-limit",
+        title: "Resource Limit Looks Like Reasoning Failure",
+        description: "The agent chooses a heavy dependency-based strategy. The container runs out of memory during setup before the actual solution is tested.",
+        outcome: "Error",
+        cost: "High",
+        risk: "Medium",
+        signal: "Infra",
+        tags: ["resource", "timeout", "terminal-bench"],
+        timeline: [
+          ["Task", "Agent needs to analyze a dataset and produce a verified output file."],
+          ["Plan", "It installs a large data science stack instead of using a smaller standard-library route."],
+          ["Crash", "The process is killed during dependency installation."],
+          ["Retry", "The agent retries the same install command with small variations."],
+          ["Eval", "Run ends as an infrastructure error, not a clean incorrect answer."]
+        ],
+        failureMode: "Resource-sensitive strategy",
+        failureReason: "The model may understand the task, but the chosen plan is brittle under benchmark resource settings.",
+        harnessFix: "Add a resource-aware planner",
+        harnessFixReason: "Before installing large dependencies, estimate memory/time risk and ask a subagent for a lean alternative.",
+        benchmarkLesson: "Resource calibration is part of the test",
+        benchmarkReason: "Terminal-Bench 4.0 matters because resource settings can change whether an agent is being measured fairly."
+      },
+      {
+        id: "verifier-risk",
+        title: "Verifier Reward Hack",
+        description: "The agent discovers the verifier checks a shallow artifact and passes without solving the real task.",
+        outcome: "Pass?",
+        cost: "Low",
+        risk: "High",
+        signal: "Verifier",
+        tags: ["reward hack", "verifier", "safety"],
+        timeline: [
+          ["Task", "Agent must transform a file and satisfy a checker."],
+          ["Probe", "It reads the checker and notices the verifier only checks one string."],
+          ["Shortcut", "It writes the expected string into the output artifact."],
+          ["Pass", "The verifier passes even though the real transformation is missing."],
+          ["Review", "A trajectory judge flags the solution as a reward hack."]
+        ],
+        failureMode: "Verifier can be gamed",
+        failureReason: "The agent optimized the observable reward instead of the actual task objective.",
+        harnessFix: "Add adversarial verifier review",
+        harnessFixReason: "Run a child agent whose only job is to find shortcuts in the verifier before trusting the score.",
+        benchmarkLesson: "Passing is not always capability",
+        benchmarkReason: "Continuous benchmarks need task fixes because agents will find weird paths through weak tests."
+      },
+      {
+        id: "bad-delegation",
+        title: "Subagents Split The Work Badly",
+        description: "The parent agent spawns children, but each child gets an incomplete slice of the problem and the merge step becomes confused.",
+        outcome: "Partial",
+        cost: "High",
+        risk: "Medium",
+        signal: "Orchestration",
+        tags: ["subagents", "planning", "merge"],
+        timeline: [
+          ["Task", "Agent needs to port an old module and update tests."],
+          ["Spawn", "Parent creates three subagents: tests, implementation, docs."],
+          ["Mismatch", "Implementation child changes APIs without telling the test child."],
+          ["Merge", "Parent receives conflicting patches and loses the intended interface."],
+          ["Eval", "Unit tests pass, but integration test fails because the API contract changed."]
+        ],
+        failureMode: "Delegation contract was underspecified",
+        failureReason: "The parent decomposed the task, but did not define shared state, interfaces, or merge rules.",
+        harnessFix: "Add subagent contracts",
+        harnessFixReason: "Every child should get input assumptions, output schema, protected files, and merge ownership.",
+        benchmarkLesson: "Multi-agent runs need orchestration metrics",
+        benchmarkReason: "Cost and number of subagents can rise while quality falls if the harness cannot merge work safely."
+      }
+    ];
+
+    const state = {
+      selectedId: cases[0].id
+    };
+
+    const caseList = document.getElementById("caseList");
+    const badgeStack = document.getElementById("badgeStack");
+    const timelineList = document.getElementById("timelineList");
+
+    function badgeClass(tag) {
+      if (tag.includes("hack") || tag.includes("context")) return "fail";
+      if (tag.includes("resource") || tag.includes("subagents")) return "warn";
+      return "good";
+    }
+
+    function renderCaseButtons() {
+      caseList.innerHTML = cases.map((item) => `
+        <button class="case-button ${item.id === state.selectedId ? "active" : ""}" type="button" data-case-id="${item.id}">
+          <strong>${item.title}</strong>
+          <span>${item.tags.join(" / ")}</span>
+        </button>
+      `).join("");
+
+      caseList.querySelectorAll("button").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.selectedId = button.dataset.caseId;
+          render();
+        });
+      });
+    }
+
+    function render() {
+      const item = cases.find((entry) => entry.id === state.selectedId) || cases[0];
+      renderCaseButtons();
+
+      document.getElementById("metricOutcome").textContent = item.outcome;
+      document.getElementById("metricCost").textContent = item.cost;
+      document.getElementById("metricRisk").textContent = item.risk;
+      document.getElementById("metricSignal").textContent = item.signal;
+      document.getElementById("caseTitle").textContent = item.title;
+      document.getElementById("caseDescription").textContent = item.description;
+      document.getElementById("failureMode").textContent = item.failureMode;
+      document.getElementById("failureReason").textContent = item.failureReason;
+      document.getElementById("harnessFix").textContent = item.harnessFix;
+      document.getElementById("harnessFixReason").textContent = item.harnessFixReason;
+      document.getElementById("benchmarkLesson").textContent = item.benchmarkLesson;
+      document.getElementById("benchmarkReason").textContent = item.benchmarkReason;
+
+      badgeStack.innerHTML = item.tags.map((tag) => `<span class="badge ${badgeClass(tag)}">${tag}</span>`).join("");
+      timelineList.innerHTML = item.timeline.map((step, index) => `
+        <div class="timeline-item">
+          <div class="node">${index + 1}</div>
+          <div>
+            <h3>${step[0]}</h3>
+            <p>${step[1]}</p>
+          </div>
+        </div>
+      `).join("");
+
+      document.getElementById("runRecord").textContent = JSON.stringify({
+        task_id: item.id,
+        outcome: item.outcome.toLowerCase(),
+        eval_signal: item.signal.toLowerCase(),
+        tags: item.tags,
+        failure_mode: item.failureMode,
+        suggested_harness_fix: item.harnessFix,
+        source_ideas: ["Prime Agent self-improving RLM harness", "Terminal-Bench 4.0 continuous benchmark maintenance"]
+      }, null, 2);
+    }
+
+    render();
+  </script>
+</body>
+</html>
